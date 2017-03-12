@@ -1,142 +1,169 @@
 import React from 'react'
 
-// This should be rewritten as a functional component
-
-export class CurrencyConverterInput extends React.Component {
-  constructor(props) {
-    super(props)
-  }
-  handleInputChange(e) {
-    let value = e.target.value|| 0
-    this.props.setStateValue(value, this.props.currencyMarker)
-    //console.log(ref)
-  }
-  componentWillMount() {
-  }
-  render() {
-    return (<div><input type="text" value={this.props.value} onChange={this.handleInputChange.bind(this)} /><ul>{this.props.currencyList.map((value, index) => <li key={index}>{value}</li>)}</ul></div>)
-  }
-}
-
-export function CurrencyConverterMenu() {
-
-}
-
-// List will have event handler passed down through CurrencyConverter, which will dictate whether it's open or closed
-// get it's selected value, etc
-
-export default class CurrencyConverter extends React.Component {
-  /* getInitialState()
-   * @desc Provide initial state to the component
-   * @return Object
+export const CurrencyConverterInput = (props) => {
+  /**
+   * Call setValue callback prop on change
+   * @param  {Event} e Event
    */
-  
-  getInitialState(props) {
-    let state = {}
-    // No mutations
-    state._public = Object.assign({}, this.getInitialStatePublic(), props)
-    state = Object.assign({}, state, this.getInitialStateProtected())
-
-    return state
+  const onChange = (e) => {
+    let value = e.target.value || 0
+    props.setValue(value, props._instanceKey)
   }
 
-  setter() {
+  console.log(props)
 
-    function getStateCurrencySelector() {
-      let { primary, secondary } = this.state
-      return {
-        primary: primary.currency,
-        secondary: secondary.currency
-      }
-    }
+  return (
+    <div>
+      <input type="text" value={props.value} onChange={onChange} />
+    </div>
+  )
+}
 
-    function apply(selection, newStateSlice) {
-      let slice = this.state[selection]
-      let newState = {[selection]: newStateSlice}
-      this.setState(newState)
-    }
+export const CurrencyConverterMenu = (props) => {
 
-    return {
-      rate: () => {
-        let {primary, secondary} = this.getStateCurrencySelector()
-        let url = `http://api.fixer.io/latest?base=${primary}&symbols=${secondary}`
-        // Ideal promise structure
-        fetch(url).then(res => res.json().rates[secondary]).then(rate => { this.setState({rate}) })
-      },
-      value: (value, selection) => {
-        apply(selection, {value})
-      },
-      currency: (currency, selection) => {
-        apply(selection, {currency})
-      },
-      isInputSelected: (selection) => {
-        let alt = selection === 'primary' ? 'secondary' : selection
-        this.setState({[selection]: Object.assign({}, slice, {isInputSelected: true})})
-        this.setState({[alt]: Object.assign({}, slice, {isInputSelected: false})})
-      },
-      isInputListShown: () => {
-        let alt = selection === 'primary' ? 'secondary' : primary
-        this.setState({[alt]: Object.assign({}, slice, {isInputListShown: false})})
-        // Toggle
-        this.setState({[selection]: Object.assign({}, slice, {isInputListShown: !this.state[selection].isInputListShown})})
-      }
-    }
-  }
-  setStateRate(primaryCurrency, secondaryCurrency) {
-    fetch(`http://api.fixer.io/latest?base=${primaryCurrency}&symbols=${secondaryCurrency}`).then(response => response.json()).then(json => { this.setState({ rate: json.rates[secondaryCurrency] })})
-  }
-  setStateValue(value, currencyMarker) {
-    let stateSlice = this.state[currencyMarker]
-    let newStateSlice = Object.assign({}, stateSlice, {
-      value: value
-    })
-    this.setState({primary: newStateSlice})
+}
 
-
-  }
+/** Currency Converter React Component */
+export default class CurrencyConverter extends React.Component { 
   constructor(props) {
     super(props)
-
-    // Set user definable state props, merging against component props
-    this.state = this.getInitialState()
-    this.state._definable = Object.assign({}, {
-        currencyList: ['AUD','BGN','BRL','CHF','CNY','CZK','DKK','EUR','GBP','HKD','HRK','HUF','IDR','ILS','INR','JPY','KRW','MXN','MYR','NOK','NZD','PHP','PLN','RON','RUB','SEK','SGD','THB','TRY','USD','ZAR'],
-        currencyDefaults: ['USD', 'GBP'],
-        styles: null,
-        seamless: true,
-        getter: null
-    }, props)
-
-    // Set all protected state props
-    this.state = Object.assign({}, this.state, {
-      rate: null,
-      primary: {
-        currency: this.state._definable.currencyDefaults[0],
-        value: 1000,
-        _selected: true,
-        _showList: false
-      },
-      secondary: {
-        currency: this.state._definable.currencyDefaults[1],
-        value: 0,
-        _selected: false,
-        _showList: false
-      },
-      _isFetching: false
-    })
+    this.state = this.getInitialState(props)
   }
+
+  /**
+   * Get initial public state from props
+   * @return {object} 
+   */
+  getInitialStateFromProps(props) {
+    return {
+      currencies: props.currencies,
+      callback: props.callback
+      // styles: props.styles
+    }
+  }
+
+  /**
+   * Get initial private state (cannot be modified by user props except for default currencies)
+   * @return {object} State object to be stored children of state._private
+   */
+  getInitialStatePrivate(props) {
+    return {
+      exchangeRate: null,
+      primaryInstance: {
+        value: 100,
+        currency: props.pair[0],
+        _isInputSelected: true,
+        _isInputListShown: false,
+        _instanceKey: 'primaryInstance'
+      },
+      secondaryInstance: {
+        value: 100,
+        currency: props.pair[1],
+        _isInputSelected: false,
+        _isInputListShown: true,
+        _instanceKey: 'secondaryInstance'
+      },
+      uiState: {
+        _isAsyncRequest: true,
+        _isAsyncRequestError: false
+      }
+    }
+  }
+  
+  /**
+   * Provide the initial state to the component.
+   * @param  {object} props - Props passed into component.
+   * @return {object} Object with component state, based on defaults and props.
+   */
+  getInitialState(props) {
+    return Object.assign({}, this.getInitialStateFromProps(props), {_private: this.getInitialStatePrivate(props)})
+  }
+
+  getStatePrivate(key) {
+    return this.state._private[key] || this.state._private
+  }
+
+  /**
+   * Provide uniform access to functions which modify state.
+   * @return {object} Object with functions as methods to modify state.
+   */
+  dispatchAction(actionKey) {
+    /**
+     * Abstraction to get new state for a child of state tree.
+     * @param  {string} child  Key for child in state tree
+     * @param  {object} update New state value
+     * @return {object} New state assigned, with unmodified existing state
+     */
+    const getNewStateChild = (child, update, isHiddenCall = false) => {
+      return {[child]: Object.assign({}, this.getStatePrivate(child), update)}
+    }
+
+    /**
+     * Abstraction to set state of a private state member.
+     * @param  {object}  update  New state value
+     * @param  {}  child   Key for child in state tree if isChild is true
+     * @param  {Boolean} isChild Does this update have children to apply
+     */
+    const setStatePrivate = (update, child, isChild = true) => {
+      let newState = isChild === true ? getNewStateChild(child, update) : update
+      this.setState({_private: Object.assign({}, this.state._private, newState)})
+    }
+
+    /**
+     * Actions to be dispatched*, maps to state properties.
+     * @type {Object}
+     */
+    const actions = {
+      value: (value, instanceKey) => {
+        setStatePrivate({value}, 'primaryInstance')
+      }
+    }
+
+    // Bind the context of this component to the function returned
+    return actions[actionKey].bind(this)
+  }
+
+  /**
+   * [componentDidMount description]
+   * @return {[type]} [description]
+   */
   componentDidMount() {
-    let { primary, secondary } = this.state._protected
-    //this.setStateRate(primary.currency, secondary.currency)
-    this.setter().rate()
   }
+
+  /**
+   * [componentWillUpdate description]
+   * @return {[type]} [description]
+   */
+  componentWillUpdate() {
+
+  }
+
+  /**
+   * [render description]
+   * @return {[type]} [description]
+   */
   render() {
-    // Rewrite the ...Object.assign() call as use of spread operator
+    console.log(this.state)
+    // Slice of primaryInstance and secondaryInstance from state to destructure into children as props
+    let { primaryInstance, secondaryInstance } = this.getStatePrivate()
     return (
       <div>
-      <CurrencyConverterInput {...Object.assign({}, this.state.primary, {currencyList: this.state._definable.currencyList, setStateValue: this.setStateValue.bind(this), currencyMarker: 'primary'}) } />
-      <CurrencyConverterInput {...Object.assign({}, this.state.secondary, {currencyList: this.state._definable.currencyList})} />
+      <CurrencyConverterInput { ...primaryInstance } setValue={this.dispatchAction('value')}/>
+      <CurrencyConverterInput { ...secondaryInstance } />
       </div>
     )
   }
+}
+
+
+/**
+ * Default props for CurrencyConverter component
+ */
+CurrencyConverter.defaultProps = {
+  currencies: ['AUD','BGN','BRL','CHF','CNY','CZK','DKK','EUR','GBP','HKD','HRK','HUF','IDR','ILS','INR','JPY','KRW','MXN','MYR','NOK','NZD','PHP','PLN','RON','RUB','SEK','SGD','THB','TRY','USD','ZAR'],
+  styles: {},
+  callback: function (state) {
+
+  },
+  pair: ['USD', 'GBP']
 }

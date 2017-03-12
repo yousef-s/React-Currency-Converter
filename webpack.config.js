@@ -22,7 +22,7 @@ module.exports = {
         loaders: [
             {test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel',
                 query: {
-                    presets: ['react', 'es2015'],
+                    presets: ['react', 'es2015']
                 }
             },
             {test: /\.css$/, loader: 'style!css-loader?camelCase&modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'}
